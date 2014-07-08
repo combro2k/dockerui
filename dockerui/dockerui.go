@@ -1,10 +1,10 @@
 package main
 
 import (
+	auth "github.com/abbot/go-http-auth"
 	"flag"
 	"io"
 	"log"
-	auth "github.com/abbot/go-http-auth"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -21,14 +21,6 @@ var (
 
 type UnixHandler struct {
 	path string
-}
-
-func Secret(user, realm string) string {
-	if user == "admin" {
-		// password is "hello"
-		return "$1$dlPL2MqE$oQmn16q49SqdmhenQuNgs1"
-	}
-	return ""
 }
 
 func (h *UnixHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +70,6 @@ func createUnixHandler(e string) http.Handler {
 func createHandler(dir string, e string) http.Handler {
 	var (
 		mux         = http.NewServeMux()
-		fileHandler = http.FileServer(http.Dir(dir))
 		h           http.Handler
 	)
 
@@ -94,17 +85,21 @@ func createHandler(dir string, e string) http.Handler {
 		h = createUnixHandler(e)
 	}
 
+	secrets := auth.HtpasswdFileProvider("config/.htpasswd")
+
+	authenticator := auth.NewBasicAuthenticator("dockerui", secrets)
+
 	mux.Handle("/dockerapi/", http.StripPrefix("/dockerapi", h))
-	mux.Handle("/", fileHandler)
+	mux.HandleFunc("/", authenticator.Wrap(func(res http.ResponseWriter, req *auth.AuthenticatedRequest) {
+			http.FileServer(http.Dir(dir)).ServeHTTP(res, &req.Request)
+	}))
+
 	return mux
 }
 
 func main() {
 	flag.Parse()
-
 	handler := createHandler(*assets, *endpoint)
-	authenticator := auth.NewBasicAuthenticator("dockerui", Secret)
-	http.HandleFunc("/", authenticator.Wrap(handle))
 	if err := http.ListenAndServe(*addr, handler); err != nil {
 		log.Fatal(err)
 	}
