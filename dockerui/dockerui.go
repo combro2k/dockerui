@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 	"log"
+	auth "github.com/abbot/go-http-auth"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -20,6 +21,14 @@ var (
 
 type UnixHandler struct {
 	path string
+}
+
+func Secret(user, realm string) string {
+	if user == "admin" {
+		// password is "hello"
+		return "$1$dlPL2MqE$oQmn16q49SqdmhenQuNgs1"
+	}
+	return ""
 }
 
 func (h *UnixHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +103,8 @@ func main() {
 	flag.Parse()
 
 	handler := createHandler(*assets, *endpoint)
+	authenticator := auth.NewBasicAuthenticator("dockerui", Secret)
+	http.HandleFunc("/", authenticator.Wrap(handle))
 	if err := http.ListenAndServe(*addr, handler); err != nil {
 		log.Fatal(err)
 	}
