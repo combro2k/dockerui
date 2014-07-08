@@ -16,6 +16,11 @@ RUN go get github.com/abbot/go-http-auth
 
 ADD ./dockerui /app/
 WORKDIR /app/
+
 RUN go build dockerui.go
+
+VOLUME /app/config
+
 EXPOSE 9000
+
 CMD ["./dockerui"]
