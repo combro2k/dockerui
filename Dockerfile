@@ -12,7 +12,7 @@ ENV GOPATH /go
 ENV GOROOT /usr/local/go
 ENV PATH $PATH:/usr/local/go/bin:/go/bin
 
-ADD . /app/
+ADD ./dockerui /app/
 WORKDIR /app/
 RUN go build dockerui.go
 EXPOSE 9000
