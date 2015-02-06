@@ -70,6 +70,7 @@ func createUnixHandler(e string) http.Handler {
 func createHandler(dir string, e string) http.Handler {
 	var (
 		mux         = http.NewServeMux()
+		fileHandler = http.FileServer(http.Dir(dir))
 		h           http.Handler
 	)
 
@@ -90,7 +91,7 @@ func createHandler(dir string, e string) http.Handler {
 	authenticator := auth.NewBasicAuthenticator("dockerui", secrets)
 
 	mux.Handle("/dockerapi/", http.StripPrefix("/dockerapi", h))
-	mux.HandleFunc("/", authenticator.Wrap(func(res http.ResponseWriter, req *auth.AuthenticatedRequest) {
+	mux.Handle("/", authenticator.Wrap(func(res http.ResponseWriter, req *auth.AuthenticatedRequest) {
 			http.FileServer(http.Dir(dir)).ServeHTTP(res, &req.Request)
 	}))
 
